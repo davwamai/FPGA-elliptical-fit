@@ -1,6 +1,4 @@
 #include <hls_math.h>
-#include <hls_linear_algebra.h>
-
 #define MAX_SIZE 300
 #define DIM_1 3
 #define DIM_2 3
@@ -29,9 +27,9 @@ void fitzgibbon(double* x, double* y, int size, double* a) {
         D2[i][2] = 1;
     }
 
-    hls::matrix_multiply<hls::NoTranspose, hls::NoTranspose, DIM_1, DIM_1, DIM_1, DIM_1, DIM_1, DIM_1, double, double>(D1, D1, S1);
-    hls::matrix_multiply<hls::NoTranspose, hls::NoTranspose, DIM_1, DIM_1, DIM_1, DIM_1, DIM_1, DIM_1, double, double>(D1, D2, S2);
-    hls::matrix_multiply<hls::NoTranspose, hls::NoTranspose, DIM_1, DIM_1, DIM_1, DIM_1, DIM_1, DIM_1, double, double>(D2, D2, S3);
+    transpose_300(D1, D1_t, 300, 3);
+    matmul300_(D1_t, D1, S1, 3, 300, 3);
+
 
     // Compute the inverse of S3 and store the result in T
     // Compute the eigenvectors and eigenvalues of M and store the results in evec and eval
@@ -78,7 +76,7 @@ void solve_cubic(double a, double b, double c, double d, double roots[3]) {
         double t = -q / (2 * r);
         double cosphi = t < -1 ? -1 : t > 1 ? 1 : t;
         double phi = acos(cosphi);
-        double crtr = crt(r);
+        double crtr = cbrt(r);
         double t1 = 2 * crtr;
         roots[0] = t1 * cos(phi / 3) - sub;
         roots[1] = t1 * cos((phi + M_PI * 2) / 3) - sub;
@@ -86,7 +84,7 @@ void solve_cubic(double a, double b, double c, double d, double roots[3]) {
     } else {
         // one real root
         double sd = sqrt(discriminant);
-        roots[0] = crt(q2 + sd) + crt(q2 - sd) - sub;
+        roots[0] = cbrt(q2 + sd) + cbrt(q2 - sd) - sub;
     }
 }
 
@@ -125,5 +123,29 @@ void eigenvectors_3x3(double A[3][3], double eigenvalues[3], double eigenvectors
         eigenvectors[i][0] = x / norm;
         eigenvectors[i][1] = y / norm;
         eigenvectors[i][2] = z / norm;
+    }
+}
+
+void transpose_300(double A[300][3], double B[3][300], int rows, int cols) {
+    for(int i=0; i<rows; i++)
+        for(int j=0; j<cols; j++)
+            B[j][i] = A[i][j];
+}
+
+void matmul_300(double A[3][300], double B[300][3], double C[3][3], int rowsA, int colsA, int colsB) {
+    for(int i = 0; i < rowsA; i++)
+        for(int j = 0; j < colsB; j++)
+            for(int k = 0; k < colsA; k++)
+                C[i][j] += A[i][k] * B[k][j];
+}
+
+void matmul_3x3(double A[3][3], double B[3][3], double C[3][3]) {
+    for(int i = 0; i < 3; i++) {
+        for(int j = 0; j < 3; j++) {
+            C[i][j] = 0;
+            for(int k = 0; k < 3; k++) {
+                C[i][j] += A[i][k] * B[k][j];
+            }
+        }
     }
 }
